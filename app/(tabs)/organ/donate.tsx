@@ -10,6 +10,7 @@ import {
   Alert,
   Platform,
   KeyboardAvoidingView,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -50,9 +51,9 @@ const ORGANISATIONS = [
 
 const donate = () => {
   const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
 
   // --- Form fields (unchanged) ---
-  
   const [height, setHeight] = useState('');
   const [weight, setWeight] = useState('');
   const [bloodGroup, setBloodGroup] = useState('');
@@ -84,6 +85,12 @@ const donate = () => {
     setOrgans((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  // When user taps an organisation: select it and open the modal
+  const handleSelectOrg = (id: string) => {
+    setSelectedOrgId(id);
+    setModalVisible(true);
+  };
+
   const handleSubmit = () => {
     if (!selectedOrg) {
       Alert.alert('Select Organisation', 'Please choose a hospital/organisation first.');
@@ -113,6 +120,9 @@ const donate = () => {
       'Thank you!',
       'Your organ donation pledge has been recorded successfully.'
     );
+
+    // close modal after submit
+    setModalVisible(false);
   };
 
   // ---------------- RENDER ----------------
@@ -146,7 +156,7 @@ const donate = () => {
                 <TouchableOpacity
                   key={org.id}
                   style={[styles.orgCard, isActive && styles.orgCardActive]}
-                  onPress={() => setSelectedOrgId(org.id)}
+                  onPress={() => handleSelectOrg(org.id)}
                 >
                   <View style={styles.orgIconBox}>
                     <Ionicons
@@ -189,217 +199,241 @@ const donate = () => {
             })}
           </View>
 
-          {/* Donation Form – show only after org selection */}
-          {selectedOrg && (
-            <View style={[styles.card, { marginTop: 18 }]}>
-              <Text style={styles.sectionBadge}>PLEDGE FORM</Text>
-              <Text style={styles.sectionTitle}>
-                Donor Details – {selectedOrg.name}
-              </Text>
-              {/* Health info */}
-              <Text style={styles.sectionHeader}>Health Information</Text>
-
-              <View style={styles.row}>
-                <View style={[styles.inputWrapper, { marginRight: 6 }]}>
-                  <Text style={styles.label}>Height (cm)</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={height}
-                    onChangeText={setHeight}
-                    keyboardType="numeric"
-                    placeholder="e.g. 170"
-                  />
-                </View>
-                <View style={[styles.inputWrapper, { marginLeft: 6 }]}>
-                  <Text style={styles.label}>Weight (kg)</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={weight}
-                    onChangeText={setWeight}
-                    keyboardType="numeric"
-                    placeholder="e.g. 65"
-                  />
-                </View>
-              </View>
-
-              <View style={styles.row}>
-                <View style={[styles.inputWrapper, { marginRight: 6 }]}>
-                  <Text style={styles.label}>Blood Group</Text>
-                  <TextInput
-                    style={styles.input}
-                    value={bloodGroup}
-                    onChangeText={setBloodGroup}
-                    placeholder="e.g. B+"
-                  />
-                </View>
-              </View>
-
-              {/* Donation preferences */}
-              <Text style={styles.sectionHeader}>Donation Preference</Text>
-
-              <Text style={styles.labelSmall}>
-                Once my death has been confirmed, I give permission to donate:
-              </Text>
-
-              <View style={styles.chipRow}>
-                {[
-                  { key: 'all', label: 'All organs & tissues' },
-                  { key: 'specific', label: 'Specific organs / tissues' },
-                ].map((opt) => {
-                  const active = donationScope === opt.key;
-                  return (
-                    <TouchableOpacity
-                      key={opt.key}
-                      style={[
-                        styles.chip,
-                        active && styles.chipActive,
-                      ]}
-                      onPress={() =>
-                        setDonationScope(opt.key as 'all' | 'specific')
-                      }
-                    >
-                      <Text
-                        style={[
-                          styles.chipText,
-                          active && styles.chipTextActive,
-                        ]}
-                      >
-                        {opt.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              {donationScope === 'specific' && (
-                <View style={{ marginTop: 10 }}>
-                  <Text style={styles.labelSmall}>
-                    Select organs / tissues you wish to donate:
+          {/* Modal with the pledge form */}
+          <Modal
+            visible={modalVisible}
+            animationType="slide"
+            transparent
+            onRequestClose={() => setModalVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalCard}>
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>
+                    Pledge Form
                   </Text>
-                  <View style={styles.organsGrid}>
+                  <TouchableOpacity
+                    onPress={() => setModalVisible(false)}
+                    style={styles.closeButton}
+                  >
+                    <Ionicons name="close" size={22} color={TEXT_DARK} />
+                  </TouchableOpacity>
+                </View>
+
+                <ScrollView
+                  contentContainerStyle={{ paddingBottom: 30 }}
+                  keyboardShouldPersistTaps="handled"
+                >
+                  <Text style={styles.sectionTitle}>
+                    Donor Details – {selectedOrg?.name}
+                  </Text>
+
+                  {/* Health info */}
+                  <Text style={styles.sectionHeader}>Health Information</Text>
+
+                  <View style={styles.row}>
+                    <View style={[styles.inputWrapper, { marginRight: 6 }]}>
+                      <Text style={styles.label}>Height (cm)</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={height}
+                        onChangeText={setHeight}
+                        keyboardType="numeric"
+                        placeholder="e.g. 170"
+                      />
+                    </View>
+                    <View style={[styles.inputWrapper, { marginLeft: 6 }]}>
+                      <Text style={styles.label}>Weight (kg)</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={weight}
+                        onChangeText={setWeight}
+                        keyboardType="numeric"
+                        placeholder="e.g. 65"
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.row}>
+                    <View style={[styles.inputWrapper, { marginRight: 6 }]}>
+                      <Text style={styles.label}>Blood Group</Text>
+                      <TextInput
+                        style={styles.input}
+                        value={bloodGroup}
+                        onChangeText={setBloodGroup}
+                        placeholder="e.g. B+"
+                      />
+                    </View>
+                  </View>
+
+                  {/* Donation preferences */}
+                  <Text style={styles.sectionHeader}>Donation Preference</Text>
+
+                  <Text style={styles.labelSmall}>
+                    Once my death has been confirmed, I give permission to donate:
+                  </Text>
+
+                  <View style={styles.chipRow}>
                     {[
-                      ['eyes', 'Eyes'],
-                      ['heart', 'Heart'],
-                      ['lungs', 'Lungs'],
-                      ['kidneys', 'Kidneys'],
-                      ['liver', 'Liver'],
-                      ['skin', 'Skin'],
-                      ['bone', 'Bones'],
-                      ['pancreas', 'Pancreas'],
-                      ['intestine', 'Intestine'],
-                    ].map(([key, label]) => {
-                      const k = key as keyof typeof organs;
-                      const checked = organs[k];
+                      { key: 'all', label: 'All organs & tissues' },
+                      { key: 'specific', label: 'Specific organs / tissues' },
+                    ].map((opt) => {
+                      const active = donationScope === opt.key;
                       return (
                         <TouchableOpacity
-                          key={key}
+                          key={opt.key}
                           style={[
-                            styles.checkboxPill,
-                            checked && styles.checkboxPillActive,
+                            styles.chip,
+                            active && styles.chipActive,
                           ]}
-                          onPress={() => toggleOrgan(k)}
+                          onPress={() =>
+                            setDonationScope(opt.key as 'all' | 'specific')
+                          }
                         >
-                          <Ionicons
-                            name={
-                              checked ? 'checkbox-outline' : 'square-outline'
-                            }
-                            size={16}
-                            color={checked ? '#fff' : PRIMARY_RED}
-                          />
                           <Text
                             style={[
-                              styles.checkboxPillText,
-                              checked && { color: '#fff' },
+                              styles.chipText,
+                              active && styles.chipTextActive,
                             ]}
                           >
-                            {label}
+                            {opt.label}
                           </Text>
                         </TouchableOpacity>
                       );
                     })}
                   </View>
-                </View>
-              )}
 
-              {/* Purpose */}
-              <Text style={styles.sectionHeader}>Purpose of Donation</Text>
-              <Text style={styles.labelSmall}>
-                I authorize my organs / tissues to be used for:
-              </Text>
-
-              <View style={styles.chipRow}>
-                {[
-                  { key: 'research', label: 'Research only' },
-                  { key: 'transplant', label: 'Transplant only' },
-                  { key: 'both', label: 'Research & Transplant' },
-                ].map((p) => {
-                  const active = purpose === p.key;
-                  return (
-                    <TouchableOpacity
-                      key={p.key}
-                      style={[
-                        styles.chip,
-                        active && styles.chipActive,
-                      ]}
-                      onPress={() =>
-                        setPurpose(
-                          p.key as 'research' | 'transplant' | 'both'
-                        )
-                      }
-                    >
-                      <Text
-                        style={[
-                          styles.chipText,
-                          active && styles.chipTextActive,
-                        ]}
-                      >
-                        {p.label}
+                  {donationScope === 'specific' && (
+                    <View style={{ marginTop: 10 }}>
+                      <Text style={styles.labelSmall}>
+                        Select organs / tissues you wish to donate:
                       </Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                      <View style={styles.organsGrid}>
+                        {[
+                          ['eyes', 'Eyes'],
+                          ['heart', 'Heart'],
+                          ['lungs', 'Lungs'],
+                          ['kidneys', 'Kidneys'],
+                          ['liver', 'Liver'],
+                          ['skin', 'Skin'],
+                          ['bone', 'Bones'],
+                          ['pancreas', 'Pancreas'],
+                          ['intestine', 'Intestine'],
+                        ].map(([key, label]) => {
+                          const k = key as keyof typeof organs;
+                          const checked = organs[k];
+                          return (
+                            <TouchableOpacity
+                              key={key}
+                              style={[
+                                styles.checkboxPill,
+                                checked && styles.checkboxPillActive,
+                              ]}
+                              onPress={() => toggleOrgan(k)}
+                            >
+                              <Ionicons
+                                name={
+                                  checked ? 'checkbox-outline' : 'square-outline'
+                                }
+                                size={16}
+                                color={checked ? '#fff' : PRIMARY_RED}
+                              />
+                              <Text
+                                style={[
+                                  styles.checkboxPillText,
+                                  checked && { color: '#fff' },
+                                ]}
+                              >
+                                {label}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  )}
+
+                  {/* Purpose */}
+                  <Text style={styles.sectionHeader}>Purpose of Donation</Text>
+                  <Text style={styles.labelSmall}>
+                    I authorize my organs / tissues to be used for:
+                  </Text>
+
+                  <View style={styles.chipRow}>
+                    {[
+                      { key: 'research', label: 'Research only' },
+                      { key: 'transplant', label: 'Transplant only' },
+                      { key: 'both', label: 'Research & Transplant' },
+                    ].map((p) => {
+                      const active = purpose === p.key;
+                      return (
+                        <TouchableOpacity
+                          key={p.key}
+                          style={[
+                            styles.chip,
+                            active && styles.chipActive,
+                          ]}
+                          onPress={() =>
+                            setPurpose(
+                              p.key as 'research' | 'transplant' | 'both'
+                            )
+                          }
+                        >
+                          <Text
+                            style={[
+                              styles.chipText,
+                              active && styles.chipTextActive,
+                            ]}
+                          >
+                            {p.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+
+                  {/* Notes */}
+                  <Text style={styles.sectionHeader}>Notes / Medical History</Text>
+                  <Text style={styles.labelSmall}>
+                    Add any important information (diseases, medicines, allergies, etc.).
+                  </Text>
+                  <TextInput
+                    style={[styles.input, { height: 90, textAlignVertical: 'top' }]}
+                    multiline
+                    value={notes}
+                    onChangeText={setNotes}
+                    placeholder="If there is nothing to add, you can write 'None'."
+                  />
+                  {/* Signature */}
+                  <Text style={styles.sectionHeader}>Donor&apos;s Signature</Text>
+                  <Text style={styles.labelSmall}>
+                    Type your full name here as a digital signature.
+                  </Text>
+                  <TextInput
+                    style={styles.input}
+                    value={signature}
+                    onChangeText={setSignature}
+                    placeholder="Sign here"
+                  />
+
+                  {/* Consent text */}
+                  <Text style={styles.consentText}>
+                    By submitting this form, I confirm that I wish to pledge my
+                    organs/tissues after my death for the purposes selected above. I
+                    understand this is a voluntary decision and my family will be
+                    informed. I will also discuss this wish with my family members /
+                    guardian.
+                  </Text>
+
+                  {/* Submit */}
+                  <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+                    <Ionicons name="hand-left-outline" size={18} color="#fff" />
+                    <Text style={styles.submitButtonText}>Submit Pledge</Text>
+                  </TouchableOpacity>
+                </ScrollView>
               </View>
-
-              {/* Notes */}
-              <Text style={styles.sectionHeader}>Notes / Medical History</Text>
-              <Text style={styles.labelSmall}>
-                Add any important information (diseases, medicines, allergies, etc.).
-              </Text>
-              <TextInput
-                style={[styles.input, { height: 90, textAlignVertical: 'top' }]}
-                multiline
-                value={notes}
-                onChangeText={setNotes}
-                placeholder="If there is nothing to add, you can write 'None'."
-              />
-              {/* Signature */}
-              <Text style={styles.sectionHeader}>Donor&apos;s Signature</Text>
-              <Text style={styles.labelSmall}>
-                Type your full name here as a digital signature.
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={signature}
-                onChangeText={setSignature}
-                placeholder="Sign here"
-              />
-
-              {/* Consent text */}
-              <Text style={styles.consentText}>
-                By submitting this form, I confirm that I wish to pledge my
-                organs/tissues after my death for the purposes selected above. I
-                understand this is a voluntary decision and my family will be
-                informed. I will also discuss this wish with my family members /
-                guardian.
-              </Text>
-
-              {/* Submit */}
-              <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-                <Ionicons name="hand-left-outline" size={18} color="#fff" />
-                <Text style={styles.submitButtonText}>Submit Pledge</Text>
-              </TouchableOpacity>
             </View>
-          )}
+          </Modal>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -635,5 +669,34 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     marginLeft: 6,
+  },
+
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'center',
+    padding: 16,
+  },
+  modalCard: {
+    backgroundColor: CARD_BG,
+    borderRadius: 16,
+    padding: 14,
+    maxHeight: '90%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: TEXT_DARK,
+  },
+  closeButton: {
+    padding: 6,
+    borderRadius: 8,
   },
 });
