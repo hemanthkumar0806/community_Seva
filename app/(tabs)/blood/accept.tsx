@@ -333,12 +333,14 @@ const Accept: React.FC = () => {
   const [searchBloodGroup, setSearchBloodGroup] = useState('');
   const [selectedDistrict, setSelectedDistrict] = useState<string>('All Districts');
 const [showDistrictDropdown, setShowDistrictDropdown] = useState(false);
+  const [showBloodGroupDropdown, setShowBloodGroupDropdown] = useState(false);
 
   const [bloodBanks, setBloodBanks] = useState<BloodBank[]>(INITIAL_BLOOD_BANKS);
 
   const [inventoryModalVisible, setInventoryModalVisible] = useState(false);
   const [selectedBankForInventory, setSelectedBankForInventory] = useState<BloodBank | null>(null);
   const [tempInventory, setTempInventory] = useState<BloodInventory>({});
+const ALL_BLOOD_GROUPS: string[] = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
   // ---------------- FILTERS ----------------
 
@@ -423,14 +425,59 @@ const [showDistrictDropdown, setShowDistrictDropdown] = useState(false);
           </View>
 
           {/* Blood Group Search */}
-          <Text style={styles.label}>Search by Blood Group</Text>
-          <TextInput
-            placeholder="e.g. A+, B-, O+"
-            style={styles.input}
-            value={searchBloodGroup}
-            onChangeText={setSearchBloodGroup}
-          />
+          <View>
+  <Text style={styles.label}>Search by Blood Group</Text>
+  
+  <TouchableOpacity
+    style={styles.dropdownButton}
+    onPress={() => setShowBloodGroupDropdown(true)}
+  >
+    <Text style={styles.dropdownButtonText}>
+      {searchBloodGroup || 'Select Blood Group'}
+    </Text>
+  </TouchableOpacity>
 
+  {showBloodGroupDropdown && (
+    <Modal transparent animationType="fade">
+      <View style={styles.dropdownOverlay}>
+        <View style={styles.dropdownBox}>
+          <ScrollView>
+            <TouchableOpacity
+              style={styles.dropdownItem}
+              onPress={() => {
+                setSearchBloodGroup('');
+                setShowBloodGroupDropdown(false);
+              }}
+            
+            >
+              <Text style={styles.dropdownItemText}>All Blood Groups</Text>
+            </TouchableOpacity>
+            
+            {ALL_BLOOD_GROUPS.map((group) => (
+              <TouchableOpacity
+                key={group}
+                style={styles.dropdownItem}
+                onPress={() => {
+                  setSearchBloodGroup(group);
+                  setShowBloodGroupDropdown(false);
+                }}
+              >
+                <Text style={styles.dropdownItemText}>{group}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
+          <TouchableOpacity
+            style={styles.closeDropdownBtn}
+            onPress={() => setShowBloodGroupDropdown(false)}
+          >
+            <Text style={styles.closeDropdownText}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  )}
+</View>
           <Text style={styles.label}>Select District</Text>
 
 <TouchableOpacity

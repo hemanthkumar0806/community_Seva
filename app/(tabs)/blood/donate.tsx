@@ -17,6 +17,8 @@ const Donate = () => {
   const [handleyes,setHandleYes] = useState(true)
   const [age, setAge] = useState('');
   const [weight, setWeight] = useState('');
+  const [height, setheight] = useState('');
+
   const [hb, setHb] = useState('');
   const [bp, setBp] = useState('');
   const [liveAccess,setLiveAccess] = useState(false);
@@ -73,6 +75,7 @@ const Donate = () => {
 
     const payload = {
       age,
+      height,
       weight,
       hb,
       bp,
@@ -374,6 +377,18 @@ const Donate = () => {
             {errors.age ? (
               <Text style={styles.errorText}>{errors.age}</Text>
             ) : null}
+            <Text style={styles.label}>
+              Height (cm) <Text style={styles.required}>*</Text>
+            </Text>
+            <TextInput
+              style={[styles.input, errors.weight && styles.inputError]}
+              value={weight}
+              onChangeText={(t) => {
+                setheight(t);
+              }}
+              keyboardType="numeric"
+              placeholder="Enter your height"
+            />
 
             <Text style={styles.label}>
               Weight (kg) <Text style={styles.required}>*</Text>
@@ -391,7 +406,7 @@ const Donate = () => {
             {errors.weight ? (
               <Text style={styles.errorText}>{errors.weight}</Text>
             ) : null}
-
+            
             <Text style={styles.label}>
               Hb (g/dL) <Text style={styles.required}>*</Text>
             </Text>
