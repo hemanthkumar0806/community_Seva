@@ -382,14 +382,13 @@ const Donate = () => {
             </Text>
             <TextInput
               style={[styles.input, errors.weight && styles.inputError]}
-              value={weight}
+              value={height}
               onChangeText={(t) => {
                 setheight(t);
               }}
               keyboardType="numeric"
               placeholder="Enter your height"
             />
-
             <Text style={styles.label}>
               Weight (kg) <Text style={styles.required}>*</Text>
             </Text>
