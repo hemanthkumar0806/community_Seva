@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 // ---------------- CONFIG ----------------
 
-const GOOGLE_AI_API_KEY = 'AIzaSyDv-7D6s5XJSUaCukZtHi96EaSjGnSVJdM';
+const GOOGLE_AI_API_KEY = 'AIzaSyDv0Zcv5c4ZoTewW0uxoXRpXY2_CWLw-p8';
 const GEMINI_URL =
   'https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash-lite:generateContent';
 

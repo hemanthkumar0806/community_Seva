@@ -1,24 +1,27 @@
-import React, { useMemo, useState } from 'react';
+import { API_URL } from '@/utils/api';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  View,
-  Text,
-  SafeAreaView,
+  Alert,
+  Image,
+  Modal,
   ScrollView,
+  Text,
   TextInput,
   TouchableOpacity,
-  Image,
-  Alert,
-  StyleSheet,
-  Modal,
+  View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 // =========================
 // TYPES
 // =========================
 
-type BloodInventory = Record<string, number>;
+export type BloodInventory = Record<string, number>;
 
-interface BloodBank {
+export interface BloodBank {
   id: string;
   name: string;
   location: string;
@@ -30,18 +33,54 @@ interface BloodBank {
   inventory: BloodInventory;
 }
 
-interface Donor {
-  id: string;
-  name: string;
-  bloodGroup: string;
-  location: string;
-  district: string;
-  image: string;
+export interface Donor {
+  _id: string;
+  user: {
+    _id: string;
+    name: string;
+    email: string;
+    mobile: string;
+    gender : string ;
+  };
+  Age: string;
+  Weight: string;
+  Hb: string;
+  Bp: string;
+  bloodgroup:
+    | "A+"
+    | "A-"
+    | "B+"
+    | "B-"
+    | "AB+"
+    | "AB-"
+    | "O+"
+    | "O-";
+  likeToDonate: (
+    | "whole Blood"
+    | "Plasma"
+    | "Platelets"
+    | "RBC"
+    | "WBC"
+  )[];
+  DonationHistory: {
+    donatePreviously: "yes" | "no";
+    lastDonationDate?: string;
+  }[];
+  recentActivities: string[];
+  diseases: string[];
+  medications: string[];
+  surgeriesHistory: string[];
+  shareLocation: boolean;
+  district?: string;
+  location?: string;
+  createdAt: string;
+  updatedAt: string;
+  __v: number;
 }
 
-// =========================
-// ALL DISTRICTS (AP + TG)
-// =========================
+
+const ALL_BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
+
 
 const ALL_DISTRICTS: string[] = [
   // --- ANDHRA PRADESH ---
@@ -105,138 +144,8 @@ const ALL_DISTRICTS: string[] = [
   'Yadadri Bhuvanagiri',
 ].sort((a, b) => a.localeCompare(b));
 
-// =========================
-// DONORS DATA
-// =========================
 
-const DONORS: Donor[] = [
-  {
-    id: 'd1',
-    name: 'Rohit Kumar',
-    bloodGroup: 'A+',
-    location: 'Vijayawada',
-    district: 'Krishna',
-    image: 'https://via.placeholder.com/80/fee2e2/dc2626?text=D1',
-  },
-  {
-    id: 'd2',
-    name: 'Sravani',
-    bloodGroup: 'B+',
-    location: 'Eluru',
-    district: 'West Godavari',
-    image: 'https://via.placeholder.com/80/fee2e2/dc2626?text=D2',
-  },
-  {
-    id: 'd3',
-    name: 'Mahesh',
-    bloodGroup: 'O-',
-    location: 'Bhimavaram',
-    district: 'West Godavari',
-    image: 'https://via.placeholder.com/80/fee2e2/dc2626?text=D3',
-  },
-  {
-    id: 'd4',
-    name: 'Priya Reddy',
-    bloodGroup: 'A+',
-    location: 'Guntur',
-    district: 'Guntur',
-    image: 'https://via.placeholder.com/80/fee2e2/dc2626?text=D4',
-  },
-  {
-    id: 'd5',
-    name: 'Ramesh',
-    bloodGroup: 'AB+',
-    location: 'Rajahmundry',
-    district: 'East Godavari',
-    image: 'https://via.placeholder.com/80/fee2e2/dc2626?text=D5',
-  },
 
-  // Additional donors
-  {
-    id: 'd6',
-    name: 'Lakshmi Narayana',
-    bloodGroup: 'O+',
-    location: 'Nuzvid',
-    district: 'Krishna',
-    image: 'https://via.placeholder.com/80/fee2e2/dc2626?text=D6',
-  },
-  {
-    id: 'd7',
-    name: 'Sunitha',
-    bloodGroup: 'B-',
-    location: 'Tanuku',
-    district: 'West Godavari',
-    image: 'https://via.placeholder.com/80/fee2e2/dc2626?text=D7',
-  },
-  {
-    id: 'd8',
-    name: 'Chaitanya',
-    bloodGroup: 'A-',
-    location: 'Tenali',
-    district: 'Guntur',
-    image: 'https://via.placeholder.com/80/fee2e2/dc2626?text=D8',
-  },
-  {
-    id: 'd9',
-    name: 'Harika',
-    bloodGroup: 'O+',
-    location: 'Kakinada',
-    district: 'East Godavari',
-    image: 'https://via.placeholder.com/80/fee2e2/dc2626?text=D9',
-  },
-  {
-    id: 'd10',
-    name: 'Sandeep',
-    bloodGroup: 'B+',
-    location: 'Visakhapatnam',
-    district: 'Visakhapatnam',
-    image: 'https://via.placeholder.com/80/fee2e2/dc2626?text=D10',
-  },
-  {
-    id: 'd11',
-    name: 'Meghana',
-    bloodGroup: 'AB-',
-    location: 'Mangalagiri',
-    district: 'Guntur',
-    image: 'https://via.placeholder.com/80/fee2e2/dc2626?text=D11',
-  },
-  {
-    id: 'd12',
-    name: 'Venkatesh',
-    bloodGroup: 'O-',
-    location: 'Ongole',
-    district: 'Prakasam',
-    image: 'https://via.placeholder.com/80/fee2e2/dc2626?text=D12',
-  },
-  {
-    id: 'd13',
-    name: 'Alekhya',
-    bloodGroup: 'A+',
-    location: 'Machilipatnam',
-    district: 'Krishna',
-    image: 'https://via.placeholder.com/80/fee2e2/dc2626?text=D13',
-  },
-  {
-    id: 'd14',
-    name: 'Rohini',
-    bloodGroup: 'B+',
-    location: 'Amalapuram',
-    district: 'East Godavari',
-    image: 'https://via.placeholder.com/80/fee2e2/dc2626?text=D14',
-  },
-  {
-    id: 'd15',
-    name: 'Karthik',
-    bloodGroup: 'O+',
-    location: 'Vizianagaram',
-    district: 'Vizianagaram',
-    image: 'https://via.placeholder.com/80/fee2e2/dc2626?text=D15',
-  },
-];
-
-// =========================
-// BLOOD BANKS
-// =========================
 
 const INITIAL_BLOOD_BANKS: BloodBank[] = [
   {
@@ -324,15 +233,11 @@ const INITIAL_BLOOD_BANKS: BloodBank[] = [
   },
 ];
 
-// =========================
-// MAIN SCREEN
-// =========================
-
 const Accept: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'donors' | 'banks'>('donors');
   const [searchBloodGroup, setSearchBloodGroup] = useState('');
-  const [selectedDistrict, setSelectedDistrict] = useState<string>('All Districts');
-const [showDistrictDropdown, setShowDistrictDropdown] = useState(false);
+  const [selectedDistrict, setSelectedDistrict] = useState('All Districts');
+  const [showDistrictDropdown, setShowDistrictDropdown] = useState(false);
   const [showBloodGroupDropdown, setShowBloodGroupDropdown] = useState(false);
 
   const [bloodBanks, setBloodBanks] = useState<BloodBank[]>(INITIAL_BLOOD_BANKS);
@@ -340,33 +245,80 @@ const [showDistrictDropdown, setShowDistrictDropdown] = useState(false);
   const [inventoryModalVisible, setInventoryModalVisible] = useState(false);
   const [selectedBankForInventory, setSelectedBankForInventory] = useState<BloodBank | null>(null);
   const [tempInventory, setTempInventory] = useState<BloodInventory>({});
-const ALL_BLOOD_GROUPS: string[] = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 
-  // ---------------- FILTERS ----------------
+  const [donors, setDonors] = useState<Donor[]>([]);
+  const [loading, setLoading] = useState(false);
 
+  const getDonors = async () => {
+    try {
+      setLoading(true);
+      const res = await axios.get(`${API_URL}/api/blood/getdonations`);
+      if (res.data.success) setDonors(res.data.donors);
+      console.log(res.data.donors)
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+// Function to send mail
+ const sendMailToDonor = async (donorMail: string) => {
+  try {
+    // Get the token from AsyncStorage
+    const token = await AsyncStorage.getItem("token");
+
+    if (!token) {
+      Alert.alert("Error", "User not authenticated");
+      return;
+    }
+
+    // Make the POST request to send mail
+    const response = await axios.post(
+      `${API_URL}/api/mail/send`, // replace with your actual route
+      { donorMail },
+      {
+        headers: {
+          Authorization: `Bearer ${token}`, // send token for verification
+        },
+      }
+    );
+
+    if (response.data.success) {
+      Alert.alert("Success", response.data.message || "Mail sent successfully");
+    } else {
+      Alert.alert("Error", response.data.message || "Failed to send mail");
+    }
+  } catch (error: any) {
+    console.log(error.response?.data || error.message);
+    Alert.alert("Error", "Something went wrong while sending mail");
+  }
+};
+
+
+  useEffect(() => {
+    getDonors();
+  }, []);
+
+  // Filters
   const filteredDonors = useMemo(() => {
-    return DONORS.filter((d) => {
+    return donors.filter(d => {
       const bloodMatch = searchBloodGroup
-        ? d.bloodGroup.toLowerCase().includes(searchBloodGroup.toLowerCase())
+        ? d.bloodgroup.toLowerCase() === searchBloodGroup.toLowerCase()
         : true;
-
       const districtMatch =
         selectedDistrict === 'All Districts' ? true : d.district === selectedDistrict;
-
       return bloodMatch && districtMatch;
     });
-  }, [searchBloodGroup, selectedDistrict]);
+  }, [donors, searchBloodGroup, selectedDistrict]);
 
-  const filteredBanks = useMemo(
-    () =>
-      bloodBanks.filter((b) =>
-        selectedDistrict === 'All Districts' ? true : b.district === selectedDistrict
-      ),
-    [selectedDistrict, bloodBanks]
-  );
+  const filteredBanks = useMemo(() => {
+    return bloodBanks.filter(b =>
+      selectedDistrict === 'All Districts' ? true : b.district === selectedDistrict
+    );
+  }, [bloodBanks, selectedDistrict]);
 
-  // ------------- INVENTORY MODAL -------------
-
+  // Inventory Modal
   const openInventoryModal = (bank: BloodBank) => {
     setSelectedBankForInventory(bank);
     setTempInventory(bank.inventory || {});
@@ -381,9 +333,8 @@ const ALL_BLOOD_GROUPS: string[] = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 
 
   const saveInventory = () => {
     if (!selectedBankForInventory) return;
-
-    setBloodBanks((prev) =>
-      prev.map((b) =>
+    setBloodBanks(prev =>
+      prev.map(b =>
         b.id === selectedBankForInventory.id ? { ...b, inventory: { ...tempInventory } } : b
       )
     );
@@ -391,162 +342,182 @@ const ALL_BLOOD_GROUPS: string[] = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 
     closeInventoryModal();
   };
 
-  // ---------------- UI ----------------
-
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.title}>Accept Blood</Text>
-        <Text style={styles.subtitle}>Search donors & blood banks</Text>
+    <SafeAreaView className="flex-1 bg-white">
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
+        <Text className="text-3xl font-extrabold text-red-700 text-center">
+          Accept Blood
+        </Text>
+        <Text className="text-center text-red-800 mb-4">
+          Search donors & blood banks
+        </Text>
 
-        {/* Main Card */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>View</Text>
-
-          {/* Tabs */}
-          <View style={{ flexDirection: 'row', marginTop: 8 }}>
-            <TouchableOpacity
-              style={[styles.chip, activeTab === 'donors' && styles.chipSelected]}
-              onPress={() => setActiveTab('donors')}
-            >
-              <Text style={[styles.chipText, activeTab === 'donors' && styles.chipTextSelected]}>
-                Donors
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.chip, activeTab === 'banks' && styles.chipSelected]}
-              onPress={() => setActiveTab('banks')}
-            >
-              <Text style={[styles.chipText, activeTab === 'banks' && styles.chipTextSelected]}>
-                Blood Banks
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Blood Group Search */}
-          <View>
-  <Text style={styles.label}>Search by Blood Group</Text>
-  
-  <TouchableOpacity
-    style={styles.dropdownButton}
-    onPress={() => setShowBloodGroupDropdown(true)}
-  >
-    <Text style={styles.dropdownButtonText}>
-      {searchBloodGroup || 'Select Blood Group'}
-    </Text>
-  </TouchableOpacity>
-
-  {showBloodGroupDropdown && (
-    <Modal transparent animationType="fade">
-      <View style={styles.dropdownOverlay}>
-        <View style={styles.dropdownBox}>
-          <ScrollView>
-            <TouchableOpacity
-              style={styles.dropdownItem}
-              onPress={() => {
-                setSearchBloodGroup('');
-                setShowBloodGroupDropdown(false);
-              }}
-            
-            >
-              <Text style={styles.dropdownItemText}>All Blood Groups</Text>
-            </TouchableOpacity>
-            
-            {ALL_BLOOD_GROUPS.map((group) => (
-              <TouchableOpacity
-                key={group}
-                style={styles.dropdownItem}
-                onPress={() => {
-                  setSearchBloodGroup(group);
-                  setShowBloodGroupDropdown(false);
-                }}
-              >
-                <Text style={styles.dropdownItemText}>{group}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-
+        {/* Tabs */}
+        <View className="flex-row mb-4">
           <TouchableOpacity
-            style={styles.closeDropdownBtn}
-            onPress={() => setShowBloodGroupDropdown(false)}
+            className={`px-4 py-2 rounded-full mr-2 border ${activeTab === 'donors' ? 'bg-red-700 border-red-700' : 'bg-white border-red-300'
+              }`}
+            onPress={() => setActiveTab('donors')}
           >
-            <Text style={styles.closeDropdownText}>Close</Text>
+            <Text
+              className={`font-semibold ${activeTab === 'donors' ? 'text-white' : 'text-red-800'
+                }`}
+            >
+              Donors
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            className={`px-4 py-2 rounded-full border ${activeTab === 'banks' ? 'bg-red-700 border-red-700' : 'bg-white border-red-300'
+              }`}
+            onPress={() => setActiveTab('banks')}
+          >
+            <Text
+              className={`font-semibold ${activeTab === 'banks' ? 'text-white' : 'text-red-800'
+                }`}
+            >
+              Blood Banks
+            </Text>
           </TouchableOpacity>
         </View>
-      </View>
-    </Modal>
-  )}
-</View>
-          <Text style={styles.label}>Select District</Text>
 
-<TouchableOpacity
-  style={styles.dropdownButton}
-  onPress={() => setShowDistrictDropdown(true)}
->
-  <Text style={styles.dropdownButtonText}>
-    {selectedDistrict}
-  </Text>
-</TouchableOpacity>
+        {/* Filters */}
+        <View className="mb-4">
+          <Text className="font-semibold text-red-900 mb-2">Search by Blood Group</Text>
+          <TouchableOpacity
+            className="border border-red-300 rounded-lg p-3 bg-white"
+            onPress={() => setShowBloodGroupDropdown(true)}
+          >
+            <Text>{searchBloodGroup || 'Select Blood Group'}</Text>
+          </TouchableOpacity>
 
-{showDistrictDropdown && (
-  <Modal transparent animationType="fade">
-    <View style={styles.dropdownOverlay}>
-      <View style={styles.dropdownBox}>
-        <ScrollView>
-          {ALL_DISTRICTS.map((dist) => (
-            <TouchableOpacity
-              key={dist}
-              style={styles.dropdownItem}
-              onPress={() => {
-                setSelectedDistrict(dist);
-                setShowDistrictDropdown(false);
-              }}
-            >
-              <Text style={styles.dropdownItemText}>{dist}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+          {showBloodGroupDropdown && (
+            <Modal transparent animationType="fade">
+              <View className="flex-1 bg-black bg-opacity-50 justify-center items-center p-4">
+                <View className="bg-white rounded-xl w-full max-h-80 p-4 border border-red-300">
+                  <ScrollView>
+                    <TouchableOpacity
+                      className="p-3 border-b border-red-100"
+                      onPress={() => {
+                        setSearchBloodGroup('');
+                        setShowBloodGroupDropdown(false);
+                      }}
+                    >
+                      <Text>All Blood Groups</Text>
+                    </TouchableOpacity>
+                    {ALL_BLOOD_GROUPS.map(group => (
+                      <TouchableOpacity
+                        key={group}
+                        className="p-3 border-b border-red-100"
+                        onPress={() => {
+                          setSearchBloodGroup(group);
+                          setShowBloodGroupDropdown(false);
+                        }}
+                      >
+                        <Text>{group}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                  <TouchableOpacity
+                    className="bg-red-700 rounded-lg p-3 mt-2 items-center"
+                    onPress={() => setShowBloodGroupDropdown(false)}
+                  >
+                    <Text className="text-white font-bold">Close</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
+          )}
 
-        <TouchableOpacity
-          style={styles.closeDropdownBtn}
-          onPress={() => setShowDistrictDropdown(false)}
-        >
-          <Text style={styles.closeDropdownText}>Close</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </Modal>
-)}
+          <Text className="font-semibold text-red-900 mb-2 mt-3">Select District</Text>
+          <TouchableOpacity
+            className="border border-red-300 rounded-lg p-3 bg-white"
+            onPress={() => setShowDistrictDropdown(true)}
+          >
+            <Text>{selectedDistrict}</Text>
+          </TouchableOpacity>
 
+          {showDistrictDropdown && (
+            <Modal transparent animationType="fade">
+              <View className="flex-1 bg-black bg-opacity-50 justify-center items-center p-4">
+                <View className="bg-white rounded-xl w-full max-h-80 p-4 border border-red-300">
+                  <ScrollView>
+                    {ALL_DISTRICTS.map(dist => (
+                      <TouchableOpacity
+                        key={dist}
+                        className="p-3 border-b border-red-100"
+                        onPress={() => {
+                          setSelectedDistrict(dist);
+                          setShowDistrictDropdown(false);
+                        }}
+                      >
+                        <Text>{dist}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                  <TouchableOpacity
+                    className="bg-red-700 rounded-lg p-3 mt-2 items-center"
+                    onPress={() => setShowDistrictDropdown(false)}
+                  >
+                    <Text className="text-white font-bold">Close</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Modal>
+          )}
         </View>
 
-        {/* DONORS TAB */}
+        {/* Donors Tab */}
         {activeTab === 'donors' && (
-          <View style={{ marginTop: 20 }}>
-            <Text style={styles.sectionTitle}>Available Donors</Text>
-
+          <View>
+            <Text className="text-xl font-bold text-red-800 mb-2">Available Donors</Text>
             {filteredDonors.length === 0 ? (
-              <Text style={styles.infoText}>No donors found</Text>
+              <Text className="text-center text-red-900 mt-2">No donors found</Text>
             ) : (
-              filteredDonors.map((donor) => (
-                <View key={donor.id} style={[styles.card, { marginTop: 12 }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Image source={{ uri: donor.image }} style={styles.donorImage} />
-                    <View style={{ marginLeft: 12, flex: 1 }}>
-                      <Text style={styles.donorName}>{donor.name}</Text>
-                      <Text style={styles.donorText}>Blood: {donor.bloodGroup}</Text>
-                      <Text style={styles.donorText}>Location: {donor.location}</Text>
+              filteredDonors.map(donor => (
+                <View
+                  key={donor._id}
+                  className="bg-red-100 p-4 rounded-2xl shadow-md border-l-4 border-red-500 mb-4"
+                >
+                  <View className="flex-row items-center justify-between">
+                    <View className="flex-1">
+                      <Text className="text-lg font-bold text-red-900">
+                        {donor.user.name}({donor.user.gender})
+                      </Text>
+                      <View className="flex-row items-center mt-1">
+                        <MaterialCommunityIcons
+                          name="water"
+                          size={18}
+                          color="#dc2626"
+                        />
+                        <Text className="ml-2 text-base text-red-700">
+                          {donor.Age} yrs, {donor.Weight} kg
+                        </Text>
+                      </View>
+                      <View className="flex-row items-center mt-1">
+                        <Ionicons
+                          name="location-sharp"
+                          size={18}
+                          color="#3b82f6"
+                        />
+                        <Text className="ml-2 text-base text-red-600">
+                          {donor.location || 'Not provided'}
+                        </Text>
+                      </View>
+                    </View>
+                    <View className="bg-red-200 px-4 py-2 rounded-full">
+                      <Text className="text-red-500 font-bold text-lg">
+                        {donor.bloodgroup}
+                      </Text>
                     </View>
                   </View>
 
                   <TouchableOpacity
-                    style={[styles.primaryButton, { marginTop: 12 }]}
-                    onPress={() =>
-                      Alert.alert('Request Sent', 'Details will be sent to your email.')
-                    }
+                    className="bg-red-400 mt-4 py-3 rounded-xl"
+                    onPress={() => sendMailToDonor(donor.user.email)}
                   >
-                    <Text style={styles.primaryButtonText}>Ask for Blood</Text>
+                    <Text className="text-center text-white font-semibold text-base">
+                      Ask for Blood
+                    </Text>
                   </TouchableOpacity>
                 </View>
               ))
@@ -554,49 +525,43 @@ const ALL_BLOOD_GROUPS: string[] = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 
           </View>
         )}
 
-        {/* BLOOD BANKS TAB */}
+        {/* Blood Banks Tab */}
         {activeTab === 'banks' && (
-          <View style={{ marginTop: 20 }}>
-            <Text style={styles.sectionTitle}>Blood Banks</Text>
-
+          <View>
+            <Text className="text-xl font-bold text-red-800 mb-2">Blood Banks</Text>
             {filteredBanks.length === 0 ? (
-              <Text style={styles.infoText}>No blood banks found</Text>
+              <Text className="text-center text-red-900 mt-2">No blood banks found</Text>
             ) : (
-              filteredBanks.map((bank) => (
-                <View key={bank.id} style={[styles.card, { marginTop: 12 }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Image source={{ uri: bank.image }} style={styles.bankImage} />
-                    <View style={{ marginLeft: 12, flex: 1 }}>
-                      <Text style={styles.bankName}>{bank.name}</Text>
-                      <Text style={styles.bankText}>{bank.location}</Text>
+              filteredBanks.map(bank => (
+                <View key={bank.id} className="bg-white p-4 rounded-2xl shadow-md border border-red-200 mb-4">
+                  <View className="flex-row items-center">
+                    <Image source={{ uri: bank.image }} className="w-16 h-16 rounded-lg bg-red-100" />
+                    <View className="ml-3 flex-1">
+                      <Text className="text-lg font-bold text-red-900">{bank.name}</Text>
+                      <Text className="text-red-700">{bank.location}</Text>
                     </View>
                   </View>
 
-                  {/* Inventory */}
-                  <View style={{ marginTop: 12 }}>
-                    <Text style={styles.sectionTitle}>Inventory:</Text>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+                  <View className="mt-3">
+                    <Text className="font-semibold text-red-800 mb-1">Inventory:</Text>
+                    <View className="flex-row flex-wrap">
                       {Object.entries(bank.inventory).map(([grp, qty]) => (
                         <View
                           key={grp}
-                          style={[
-                            styles.invBadge,
-                            { backgroundColor: qty > 5 ? '#dcfce7' : '#fee2e2' },
-                          ]}
+                          className={`px-3 py-1 rounded-md mr-2 mb-2 ${qty > 5 ? 'bg-green-100' : 'bg-red-100'
+                            }`}
                         >
-                          <Text style={styles.invText}>
-                            {grp}: {qty}
-                          </Text>
+                          <Text className="text-red-800 text-sm">{grp}: {qty}</Text>
                         </View>
                       ))}
                     </View>
                   </View>
 
                   <TouchableOpacity
-                    style={[styles.secondaryButton, { marginTop: 12 }]}
+                    className="border border-red-700 mt-3 py-2 rounded-xl items-center"
                     onPress={() => openInventoryModal(bank)}
                   >
-                    <Text style={styles.secondaryButtonText}>Update Inventory</Text>
+                    <Text className="text-red-700 font-bold">Update Inventory</Text>
                   </TouchableOpacity>
                 </View>
               ))
@@ -605,22 +570,23 @@ const ALL_BLOOD_GROUPS: string[] = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 
         )}
       </ScrollView>
 
-      {/* INVENTORY MODAL */}
+      {/* Inventory Modal */}
       <Modal visible={inventoryModalVisible} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+        <View className="flex-1 bg-black bg-opacity-50 justify-center p-5">
+          <View className="bg-white rounded-2xl p-5 max-h-4/5">
             <ScrollView>
-              <Text style={styles.modalTitle}>{selectedBankForInventory?.name}</Text>
-
-              {selectedBankForInventory?.available_groups.map((grp) => (
-                <View key={grp} style={{ marginBottom: 10 }}>
-                  <Text style={styles.label}>{grp}</Text>
+              <Text className="text-center text-2xl font-bold text-red-700 mb-4">
+                {selectedBankForInventory?.name}
+              </Text>
+              {selectedBankForInventory?.available_groups.map(grp => (
+                <View key={grp} className="mb-3">
+                  <Text className="font-semibold text-red-900 mb-1">{grp}</Text>
                   <TextInput
-                    style={styles.input}
+                    className="border border-red-300 rounded-lg p-2 bg-white"
                     keyboardType="numeric"
                     value={String(tempInventory[grp] ?? 0)}
-                    onChangeText={(txt) =>
-                      setTempInventory((prev) => ({
+                    onChangeText={txt =>
+                      setTempInventory(prev => ({
                         ...prev,
                         [grp]: Number.isNaN(parseInt(txt, 10)) ? 0 : parseInt(txt, 10),
                       }))
@@ -629,19 +595,18 @@ const ALL_BLOOD_GROUPS: string[] = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 
                 </View>
               ))}
 
-              <View style={{ flexDirection: 'row', marginTop: 20 }}>
+              <View className="flex-row mt-4 space-x-3">
                 <TouchableOpacity
-                  style={[styles.primaryButton, { flex: 1, marginRight: 8 }]}
+                  className="bg-red-700 flex-1 py-3 rounded-lg items-center"
                   onPress={saveInventory}
                 >
-                  <Text style={styles.primaryButtonText}>Save</Text>
+                  <Text className="text-white font-bold">Save</Text>
                 </TouchableOpacity>
-
                 <TouchableOpacity
-                  style={[styles.secondaryButton, { flex: 1, marginLeft: 8 }]}
+                  className="border border-red-700 flex-1 py-3 rounded-lg items-center"
                   onPress={closeInventoryModal}
                 >
-                  <Text style={styles.secondaryButtonText}>Cancel</Text>
+                  <Text className="text-red-700 font-bold">Cancel</Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -654,200 +619,3 @@ const ALL_BLOOD_GROUPS: string[] = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 
 
 export default Accept;
 
-// =========================
-// STYLES
-// =========================
-
-const PRIMARY_RED = '#dc2626';
-const LIGHT_RED = '#fee2e2';
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: LIGHT_RED },
-  scrollContent: { padding: 16 },
-  title: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: PRIMARY_RED,
-    textAlign: 'center',
-  },
-  subtitle: { textAlign: 'center', color: '#7f1d1d', marginBottom: 14 },
-
-  card: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#fecaca',
-    elevation: 3,
-  },
-
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#7f1d1d' },
-
-  label: { marginTop: 12, fontWeight: '600', color: '#450a0a' },
-
-  input: {
-    borderWidth: 1,
-    borderColor: '#fecaca',
-    borderRadius: 10,
-    padding: 8,
-    marginTop: 4,
-    backgroundColor: '#fff',
-  },
-
-  chip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: '#fecaca',
-    marginRight: 8,
-  },
-  chipSelected: { backgroundColor: PRIMARY_RED, borderColor: PRIMARY_RED },
-  chipText: { color: '#450a0a' },
-  chipTextSelected: { color: '#fff' },
-
-  dropdown: {
-    marginTop: 10,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#fecaca',
-    maxHeight: 300,
-  },
-  dropdownSelected: { backgroundColor: PRIMARY_RED },
-  dropdownText: { color: '#450a0a' },
-  dropdownTextSelected: { color: '#fff', fontWeight: '700' },
-
-  donorImage: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#fee2e2' },
-  donorName: { fontSize: 16, fontWeight: '700', color: '#450a0a' },
-  donorText: { color: '#7f1d1d' },
-
-  bankImage: { width: 60, height: 60, borderRadius: 12, backgroundColor: '#fee2e2' },
-  bankName: { fontSize: 16, fontWeight: '700', color: '#450a0a' },
-  bankText: { color: '#7f1d1d', marginTop: 4 },
-
-  invBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginRight: 8,
-    marginBottom: 8,
-  },
-  invText: { fontSize: 12, color: '#450a0a' },
-
-  primaryButton: {
-    backgroundColor: PRIMARY_RED,
-    padding: 10,
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  primaryButtonText: { color: '#fff', fontWeight: '700' },
-
-  secondaryButton: {
-    borderWidth: 1,
-    borderColor: PRIMARY_RED,
-    padding: 10,
-    borderRadius: 10,
-    alignItems: 'center',
-    backgroundColor: '#fff',
-  },
-  secondaryButtonText: { color: PRIMARY_RED, fontWeight: '700' },
-
-  infoText: { textAlign: 'center', marginTop: 10, color: '#450a0a' },
-
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
-    maxHeight: '80%',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    textAlign: 'center',
-    marginBottom: 10,
-    color: PRIMARY_RED,
-  },
-dropdownButton: {
-  borderWidth: 1,
-  borderColor: "#fecaca",
-  borderRadius: 10,
-  padding: 12,
-  backgroundColor: "#fff",
-},
-
-dropdownContainer: {
-  width: "90%",
-  borderRadius: 10,
-  backgroundColor: "#fff",
-  borderColor: "#fecaca",
-  borderWidth: 1,
-},
-
-dropdownTextBox: {
-  fontSize: 16,
-  color: "#450a0a",
-},
-
-dropdownItemTextSelected: {
-  color: PRIMARY_RED,
-  fontWeight: "bold",
-},
-
-dropdownButtonText: {
-  fontSize: 16,
-  color: "#450a0a",
-},
-
-dropdownOverlay: {
-  flex: 1,
-  backgroundColor: "rgba(0,0,0,0.5)",
-  justifyContent: "center",
-  alignItems: "center",
-  padding: 20,
-},
-
-dropdownBox: {
-  width: "100%",
-  maxHeight: "70%",
-  backgroundColor: "#fff",
-  borderRadius: 16,
-  padding: 16,
-  borderWidth: 1,
-  borderColor: "#fecaca",
-},
-
-dropdownItem: {
-  padding: 14,
-  borderBottomWidth: 1,
-  borderBottomColor: "#fce7e7",
-},
-
-dropdownItemText: {
-  fontSize: 16,
-  color: "#450a0a",
-},
-
-closeDropdownBtn: {
-  backgroundColor: PRIMARY_RED,
-  padding: 12,
-  borderRadius: 10,
-  marginTop: 10,
-  alignItems: "center",
-},
-
-closeDropdownText: {
-  color: "#fff",
-  fontSize: 16,
-  fontWeight: "700",
-},
-
-
-});

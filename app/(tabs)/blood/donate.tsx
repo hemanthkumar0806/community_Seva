@@ -11,6 +11,9 @@ import {
   Platform,
   SafeAreaView
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
+import { API_URL } from '@/utils/api';
 const PRIMARY_RED = '#dc2626';
 const LIGHT_RED = '#fee2e2';
 const Donate = () => {
@@ -70,7 +73,7 @@ const Donate = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validateForm()) return;
 
     const payload = {
@@ -90,6 +93,16 @@ const Donate = () => {
       surgeries,
       liveAccess
     };
+    const token = await AsyncStorage.getItem("token");
+
+    const response=await axios.post(API_URL
+    +'/api/blood/donation-form',payload , {headers: {
+    Authorization: `Bearer ${token}`}
+  });
+    console.log(response);
+
+
+    
     const { eligible, reasons } = checkEligibility(payload);
     setEligibilityResult({ eligible, reasons });
     setSubmitted(true);
@@ -381,7 +394,7 @@ const Donate = () => {
               Height (cm) <Text style={styles.required}>*</Text>
             </Text>
             <TextInput
-              style={[styles.input, errors.weight && styles.inputError]}
+              style={[styles.input, errors.height && styles.inputError]}
               value={height}
               onChangeText={(t) => {
                 setheight(t);
@@ -389,6 +402,7 @@ const Donate = () => {
               keyboardType="numeric"
               placeholder="Enter your height"
             />
+
             <Text style={styles.label}>
               Weight (kg) <Text style={styles.required}>*</Text>
             </Text>
