@@ -49,12 +49,13 @@ export default function HomeScreen() {
   // -------------------------
   // Fetch Today's Medicines
   // -------------------------
+  
   const fetchTodayMedicines = async () => {
     try {
-      const token = await AsyncStorage.getItem("token");
       
+      const token = await AsyncStorage.getItem("token");
       const today = new Date().toISOString().split("T")[0]; // yyyy-mm-dd
-
+      
       const res = await axios.post(
         `${API_URL}/api/medicine/get-medicines-by-date`,
         { date: today },
@@ -70,32 +71,32 @@ export default function HomeScreen() {
         
         // Convert backend medicines into your UI structure
         const formatted = res.data.medicines.flatMap((med: any) => {
-  // If no timeslots, still create a placeholder entry
-  if (!med.timeslots || med.timeslots.length === 0) {
-    return [{
-      id: med._id,
-      name: med.medicineName,
-      dosage: med.dosage,
-      instructions: med.whenToTake,
-      taken: false,
-      pillCount: Number(med.currentStock) || 0,
-      time: "Anytime",
-      timeInMinutes: 0,
-    }];
-  }
+            // If no timeslots, still create a placeholder entry
+            if (!med.timeslots || med.timeslots.length === 0) {
+              return [{
+                id: med._id,
+                name: med.medicineName,
+                dosage: med.dosage,
+                instructions: med.whenToTake,
+                taken: false,
+                pillCount: Number(med.currentStock) || 0,
+                time: "Anytime",
+                timeInMinutes: 0,
+              }];
+            }
 
-  // If timeslots exist
-  return med.timeslots.map((time: string) => ({
-    id: med._id,
-    name: med.medicineName,
-    dosage: med.dosage,
-    instructions: med.whenToTake,
-    taken: false,
-    pillCount: Number(med.currentStock) || 0,
-    time,
-    timeInMinutes: convertTimeToMinutes(time),
-  }));
-});
+            // If timeslots exist
+            return med.timeslots.map((time: string) => ({
+              id: med._id,
+              name: med.medicineName,
+              dosage: med.dosage,
+              instructions: med.whenToTake,
+              taken: false,
+              pillCount: Number(med.currentStock) || 0,
+              time,
+              timeInMinutes: convertTimeToMinutes(time),
+            }));
+          });
 
         console.log(formatted)
 
@@ -144,18 +145,37 @@ export default function HomeScreen() {
     { icon: 'thermometer', text: 'Storage tips' },
   ];
 
-  const handleTake = (id: string) => {
+  // ✅ Check if a medicine time slot is editable (current time >= medicine time)
+  const isEditable = (timeInMinutes: number) => {
+    return getCurrentTimeInMinutes() >= timeInMinutes;
+  };
+
+  const handleTake = (id: string, timeInMinutes: number) => {
+    // ✅ Only allow editing if time has arrived
+    if (!isEditable(timeInMinutes)) {
+      return;
+    }
+    
     setMedicines(
       medicines.map((med) =>
-        med.id === id ? { ...med, taken: true } : med
+        med.id === id && med.timeInMinutes === timeInMinutes
+          ? { ...med, taken: true }
+          : med
       )
     );
   };
 
-  const handleSkip = (id: string) => {
+  const handleSkip = (id: string, timeInMinutes: number) => {
+    // ✅ Only allow editing if time has arrived
+    if (!isEditable(timeInMinutes)) {
+      return;
+    }
+    
     setMedicines(
       medicines.map((med) =>
-        med.id === id ? { ...med, taken: false } : med
+        med.id === id && med.timeInMinutes === timeInMinutes
+          ? { ...med, taken: false }
+          : med
       )
     );
   };
@@ -270,6 +290,7 @@ export default function HomeScreen() {
               const passed = isTimePassed(timeInMinutes);
               const currentSection = getCurrentTimeSection();
               const isCurrentSection = currentSection === timeIndex;
+              const canEdit = isEditable(timeInMinutes); // ✅ Check if this time slot is editable
 
               return (
                 <View key={time} className="relative px-6 mb-8">
@@ -317,26 +338,36 @@ export default function HomeScreen() {
                         <Text className="text-white text-xs font-bold">NOW</Text>
                       </View>
                     )}
+                    
+                    {/* ✅ Show LOCKED badge for future time slots */}
+                    {!canEdit && (
+                      <View className="bg-gray-300 px-3 py-1.5 rounded-full flex-row items-center">
+                        <Ionicons name="lock-closed" size={12} color="#6b7280" />
+                        <Text className="text-gray-600 text-xs font-bold ml-1">LOCKED</Text>
+                      </View>
+                    )}
                   </View>
 
                   {/* Medicines List */}
                   <View className="ml-20 space-y-3">
                     {meds.map((medicine) => (
                       <View
-                        key={medicine.id}
+                        key={`${medicine.id}-${medicine.timeInMinutes}`}
                         className={`bg-white rounded-2xl p-4 shadow-md border-2 ${
-                          medicine.taken ? 'border-green-300' : 'border-gray-100'
-                        }`}
+                          medicine.taken ? 'border-green-300' : 
+                          !canEdit ? 'border-gray-200' : 'border-gray-100'
+                        } ${!canEdit ? 'opacity-60' : ''}`}
                       >
                         <View className="flex-row items-center justify-between">
                           <View className="flex-row items-center flex-1">
                             <View
                               className={`w-12 h-12 rounded-xl ${
-                                medicine.taken ? 'bg-green-500' : 'bg-[#E63946]'
+                                medicine.taken ? 'bg-green-500' : 
+                                !canEdit ? 'bg-gray-400' : 'bg-[#E63946]'
                               } items-center justify-center shadow-lg`}
                             >
                               <Ionicons
-                                name="medical"
+                                name={!canEdit ? "lock-closed" : "medical"}
                                 size={24}
                                 color="#fff"
                               />
@@ -355,35 +386,42 @@ export default function HomeScreen() {
                             </View>
                           </View>
 
-                          {/* Action Icons */}
+                          {/* Action Icons - ✅ Only show if editable */}
                           <View className="flex-row items-center ml-2">
-                            {medicine.taken ? (
-                              <>
-                                <View className="w-9 h-9 rounded-xl bg-green-100 items-center justify-center mr-2">
-                                  <Ionicons name="checkmark-circle" size={24} color="#10b981" />
-                                </View>
-                                <TouchableOpacity
-                                  onPress={() => handleSkip(medicine.id)}
-                                  className="w-9 h-9 rounded-xl bg-gray-100 items-center justify-center"
-                                >
-                                  <Ionicons name="close" size={20} color="#6b7280" />
-                                </TouchableOpacity>
-                              </>
+                            {canEdit ? (
+                              medicine.taken ? (
+                                <>
+                                  <View className="w-9 h-9 rounded-xl bg-green-100 items-center justify-center mr-2">
+                                    <Ionicons name="checkmark-circle" size={24} color="#10b981" />
+                                  </View>
+                                  <TouchableOpacity
+                                    onPress={() => handleSkip(medicine.id, medicine.timeInMinutes)}
+                                    className="w-9 h-9 rounded-xl bg-gray-100 items-center justify-center"
+                                  >
+                                    <Ionicons name="close" size={20} color="#6b7280" />
+                                  </TouchableOpacity>
+                                </>
+                              ) : (
+                                <>
+                                  <TouchableOpacity
+                                    onPress={() => handleTake(medicine.id, medicine.timeInMinutes)}
+                                    className="w-9 h-9 rounded-xl bg-green-500 items-center justify-center mr-2 shadow-md"
+                                  >
+                                    <Ionicons name="checkmark" size={22} color="#fff" />
+                                  </TouchableOpacity>
+                                  <TouchableOpacity
+                                    onPress={() => handleSkip(medicine.id, medicine.timeInMinutes)}
+                                    className="w-9 h-9 rounded-xl bg-gray-100 items-center justify-center"
+                                  >
+                                    <Ionicons name="close" size={20} color="#6b7280" />
+                                  </TouchableOpacity>
+                                </>
+                              )
                             ) : (
-                              <>
-                                <TouchableOpacity
-                                  onPress={() => handleTake(medicine.id)}
-                                  className="w-9 h-9 rounded-xl bg-green-500 items-center justify-center mr-2 shadow-md"
-                                >
-                                  <Ionicons name="checkmark" size={22} color="#fff" />
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                  onPress={() => handleSkip(medicine.id)}
-                                  className="w-9 h-9 rounded-xl bg-gray-100 items-center justify-center"
-                                >
-                                  <Ionicons name="close" size={20} color="#6b7280" />
-                                </TouchableOpacity>
-                              </>
+                              // ✅ Show locked icon for future pills
+                              <View className="w-9 h-9 rounded-xl bg-gray-200 items-center justify-center">
+                                <Ionicons name="lock-closed" size={18} color="#9ca3af" />
+                              </View>
                             )}
                           </View>
                         </View>
@@ -561,4 +599,3 @@ export default function HomeScreen() {
     </SafeAreaView>
   );
 }
-

@@ -13,7 +13,7 @@ const Index = () => {
         const token = await AsyncStorage.getItem("token");
         if(token){
             console.log(token)
-            router.replace("../(tabs)/medicine/home");
+            router.replace("../(tabs)/blood/accept");
         }else{
             router.replace("../Authentication/signin");
         }

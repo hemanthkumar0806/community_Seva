@@ -119,8 +119,8 @@ const HistoryScreen: React.FC = () => {
       if (res.data.success) {
         setMedicines(res.data.medicines);
       }
-    } catch (error) {
-      console.log("Fetch error:", error);
+    } catch (error : any) {
+      console.log("Fetch error:", error.response.data.message);
       Alert.alert("Error", "Could not fetch medicines for this date.");
     }
   };
@@ -221,7 +221,8 @@ const HistoryScreen: React.FC = () => {
   return (
     <SafeAreaView className="flex-1 bg-gray-50 mt-[-40]">
       <StatusBar barStyle="light-content" backgroundColor="#DC2626" />
-
+      
+      
       {/* HEADER */}
       <LinearGradient
         colors={["#7f1d1d", "#dc2626", "#ef4444"]}

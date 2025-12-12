@@ -58,8 +58,8 @@ export default function ProfileScreen() {
       }
 
       setLoading(false);
-    } catch (error) {
-      console.log("Profile fetch error:", error);
+    } catch (error : any) {
+      console.log("Profile fetch error:", error.response.data.message);
       setLoading(false);
     }
   };
