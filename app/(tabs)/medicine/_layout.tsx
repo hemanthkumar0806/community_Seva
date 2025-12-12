@@ -58,7 +58,7 @@ export default function MedicineLayout() {
 
       {/* ADD MEDICINE - FLOATING BUTTON (NO LABEL COLOR CHANGE NEEDED) */}
       <Tabs.Screen
-        name="addmedicine"
+        name="addMedicine"
         options={{
           tabBarLabel: "",
           tabBarIcon: () => (
@@ -84,20 +84,20 @@ export default function MedicineLayout() {
         }}
       />
 
-      {/* INSIGHTS */}
-      <Tabs.Screen
-        name="insights"
-        options={{
-          tabBarLabel: "Insights",
-          tabBarIcon: ({ focused, color }) => (
-            <Ionicons
-              name="bar-chart-outline"
-              size={27}
-              color={color}
-            />
-          ),
-        }}
+      
+    <Tabs.Screen
+  name="pharmacy"
+  options={{
+    tabBarLabel: "Pharmacy Finder",
+    tabBarIcon: ({focused, color }) => (
+      <Ionicons
+        name="location-outline"   // you can also use "location-outline" if needed
+        size={27}
+        color={color}
       />
+    ),
+  }}
+/>
     </Tabs>
   );
 }
