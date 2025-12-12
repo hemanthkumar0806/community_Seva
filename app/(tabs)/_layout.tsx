@@ -1,18 +1,57 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Drawer } from "expo-router/drawer";
 import { View, Text, Image, TouchableOpacity } from "react-native";
 import { DrawerContentScrollView, DrawerItemList } from "@react-navigation/drawer";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons";
+import axios from "axios";
+import { API_URL } from "@/utils/api";
+import { router } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const CustomDrawerContent = (props: any) => {
-  const userName = "John Doe";
-  const userLocation = "New York, USA";
-  const userEmail = "john.doe@example.com";
-  const userAvatar = "https://randomuser.me/api/portraits/men/32.jpg";
-  const memberSince = "Member since 2024";
 
-  const handleLogout = () => console.log("Logout pressed");
+
+  const [username , setUsername] = useState("");
+  const [email , setEmail] = useState("");
+  const [location , setLocation] = useState("");
+  const [mobile , setMobile] = useState("");
+  const [gender , setGender] = useState("");
+  const [address , setAddress] = useState([{city : "" , district : "" , state : ""}]);
+  const [dob , setDob] = useState("");
+
+  const getProfileData = async() => {
+    try{
+      const token = await AsyncStorage.getItem("token");
+      const response = await axios.get(`${API_URL}/api/auth/profile`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },  
+      });
+      if(response.data.success){
+        console.log(response.data.user);
+        setUsername(response.data.user.name);
+        setEmail(response.data.user.email);
+        setLocation(response.data.user.location);
+        setMobile(response.data.user.mobile);
+        setGender(response.data.user.gender);
+        setAddress(response.data.user.address);
+        setDob(response.data.user.dob);
+      }
+
+    }catch(err){
+      console.log(err);
+    }
+  }
+
+  useEffect(() => {
+    getProfileData(); 
+  } , [])
+
+  const handleLogout = async()   =>{
+    await AsyncStorage.removeItem("token");
+    router.replace("/Authentication/signin");
+  }
   const handleProfilePress = () => props.navigation.navigate("profile");
 
   return (
@@ -20,7 +59,7 @@ const CustomDrawerContent = (props: any) => {
       <DrawerContentScrollView {...props} className="pt-0" showsVerticalScrollIndicator={false}>
 
         {/* HEADER WITHOUT GRADIENT */}
-        <View className="bg-red-600 rounded-b-3xl shadow-xl overflow-hidden">
+        <View className="bg-red-600 rounded-3xl shadow-xl overflow-hidden">
 
           {/* Floating decorative circles for premium look */}
           <View className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16" />
@@ -31,48 +70,92 @@ const CustomDrawerContent = (props: any) => {
             onPress={handleProfilePress}
             activeOpacity={0.9}
           >
-            {/* Avatar */}
-            <View className="items-center mb-4">
-              <View className="relative">
-                <Image
-                  source={{ uri: userAvatar }}
-                  className="w-24 h-24 rounded-full border-4 border-white shadow-lg"
-                />
-                {/* camera icon */}
-                <View className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-white justify-center items-center shadow-md">
-                  <Ionicons name="camera" size={16} color="#dc2626" />
-                </View>
 
-                {/* online active dot */}
-                <View className="absolute top-0 right-0 w-6 h-6 bg-green-500 rounded-full border-2 border-white" />
-              </View>
-            </View>
 
             {/* USER INFO */}
-            <View className="items-center">
-              <View className="flex-row items-center mb-2">
-                <Text className="text-2xl font-bold text-white">{userName}</Text>
-                <View className="ml-2 bg-white/20 px-2 py-0.5 rounded-full">
-                  <Text className="text-white text-xs font-semibold">PRO</Text>
-                </View>
-              </View>
+      <View className="items-center w-full mt-2">
 
-              <View className="flex-row items-center mb-1">
-                <Ionicons name="mail-outline" size={12} color="#fff" />
-                <Text className="text-white/90 text-xs ml-1">{userEmail}</Text>
-              </View>
+        {/* ===== ROW: AVATAR + NAME AREA ===== */}
+        <View className="flex-row items-center w-full px-4">
 
-              <View className="flex-row items-center mb-3">
-                <Ionicons name="location-outline" size={12} color="#fff" />
-                <Text className="text-white/90 text-xs ml-1">{userLocation}</Text>
-              </View>
+          {/* AVATAR */}
+          <View className="w-20 h-20 rounded-full bg-white/20 items-center justify-center shadow-xl overflow-hidden mr-4">
+            <Image
+              source={{
+                uri:
+                  gender?.trim().toLowerCase() === "female"
+                    ? "https://cdn-icons-png.flaticon.com/512/706/706830.png"
+                  : gender?.trim().toLowerCase() === "male"
+                    ? "https://cdn-icons-png.flaticon.com/512/706/706807.png"
+                  : "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+              }}
+              className="w-full h-full"
+              resizeMode="cover"
+            />
+          </View>
 
-              {/* View Profile */}
-              <View className="bg-white/20 px-4 py-2 rounded-full flex-row items-center">
-                <Text className="text-white font-semibold text-sm mr-1">View Full Profile</Text>
-                <Ionicons name="arrow-forward" size={14} color="#fff" />
+          {/* NAME + BADGE + SUBTEXT */}
+          <View className="flex-1">
+            {/* NAME + BADGE */}
+            <View className="flex-row items-center mb-1">
+              <Text className="text-2xl font-extrabold text-white">{username}</Text>
+              <View className="ml-2 bg-white/40 px-2 py-0.5 rounded-full">
+                <Text className="text-white text-[12px] font-semibold tracking-wide">PRO</Text>
               </View>
             </View>
+
+            {/* SUBTEXT */}
+            <Text className="text-white/80 text-[12px]">
+              Blood Donor • Community Hero
+            </Text>
+          </View>
+
+        </View>
+
+        {/* ===== DETAILS BELOW (FULL WIDTH) ===== */}
+        <View className="w-full px-4 mt-4 space-y-1">
+
+          <View className="flex-row items-center">
+            <Ionicons name="mail-outline" size={15} color="#fff" />
+            <Text className="text-white/90 text-xs ml-2 flex-1" numberOfLines={1}>{email}</Text>
+          </View>
+
+          <View className="flex-row items-center">
+            <Ionicons name="call-outline" size={15} color="#fff" />
+            <Text className="text-white/90 text-xs ml-2">{mobile}</Text>
+          </View>
+
+          <View className="flex-row items-center">
+            <Ionicons name="person-outline" size={15} color="#fff" />
+            <Text className="text-white/90 text-xs ml-2 capitalize">{gender}</Text>
+          </View>
+
+          {address?.length > 0 && (
+            <View className="flex-row items-center">
+              <Ionicons name="home-outline" size={15} color="#fff" />
+              <Text className="text-white/90 text-xs ml-2 flex-1" numberOfLines={1}>
+                {address[0].city}, {address[0].district}, {address[0].state}
+              </Text>
+            </View>
+          )}
+
+          <View className="flex-row items-center mb-1">
+            <Ionicons name="calendar-outline" size={15} color="#fff" />
+            <Text className="text-white/90 text-xs ml-2">{dob}</Text>
+          </View>
+
+        </View>
+
+        {/* VIEW PROFILE BUTTON */}
+        <View className="bg-white/20 px-4 py-2 gap-2 rounded-full flex-row items-center mt-4">
+          <Text className="text-white mr-1 text-xs">View Profile</Text>
+          <Ionicons name="arrow-forward" size={14} color="#fff" />
+        </View>
+      </View>
+
+
+
+
           </TouchableOpacity>
         </View>
 
@@ -170,9 +253,7 @@ const CustomDrawerContent = (props: any) => {
           <Text className="text-red-600 font-bold text-base">Sign Out</Text>
         </TouchableOpacity>
 
-        <View className="items-center pb-2">
-          <Text className="text-gray-400 text-xs">{memberSince}</Text>
-        </View>
+
       </View>
     </SafeAreaView>
   );
@@ -180,34 +261,55 @@ const CustomDrawerContent = (props: any) => {
 
 export default function RootLayout() {
   return (
-    <Drawer
-      drawerContent={(props) => <CustomDrawerContent {...props} />}
-      screenOptions={{
-        headerTitle: "Community Seva",
-        headerTintColor: "#fff",
-        headerStyle: {
-          backgroundColor: "#dc2626",
-          elevation: 4,
-          shadowOpacity: 0.3,
-          shadowRadius: 4,
-          shadowOffset: { width: 0, height: 2 },
-        },
-        drawerActiveTintColor: "#dc2626",
-        drawerActiveBackgroundColor: "#fee2e2",
-        drawerInactiveTintColor: "#4b5563",
-        drawerLabelStyle: {
-          marginLeft: -10,
-          fontSize: 15,
-          fontWeight: "600",
-        },
-        drawerItemStyle: {
-          borderRadius: 12,
-          marginHorizontal: 8,
-          marginVertical: 2,
-          paddingHorizontal: 8,
-        },
-      }}
-    >
+        <Drawer
+  drawerContent={(props) => <CustomDrawerContent {...props} />}
+  screenOptions={({ route, navigation }) => ({
+    headerTitle: route.name === "blood"
+      ? "Blood Donation"
+      : route.name === "organ"
+      ? "Organ Donation"
+      : route.name === "medicine"
+      ? "Medicine Help"
+      : "", // fallback
+    headerTitleAlign: "center",
+    headerTitleStyle: {
+      fontWeight: "bold", // makes text bold
+      fontSize: 18,       // optional: adjust font size
+    },
+    headerTintColor: "#fff",
+    headerStyle: {
+      backgroundColor: "#dc2626",
+      elevation: 4,
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+      shadowOffset: { width: 0, height: 2 },
+    },
+    headerLeft: () => (
+      <TouchableOpacity
+        onPress={() => navigation.toggleDrawer()} // open drawer
+        style={{ marginLeft: 15 }}
+      >
+        <Ionicons name="menu" size={24} color="#fff" />
+      </TouchableOpacity>
+    ),
+    drawerActiveTintColor: "#dc2626",
+    drawerActiveBackgroundColor: "#fee2e2",
+    drawerInactiveTintColor: "#4b5563",
+    drawerLabelStyle: {
+      marginLeft: -10,
+      fontSize: 15,
+      fontWeight: "600",
+    },
+    drawerItemStyle: {
+      borderRadius: 12,
+      marginHorizontal: 8,
+      marginVertical: 2,
+      paddingHorizontal: 8,
+    },
+  })}
+>
+
+
       <Drawer.Screen
         name="blood"
         options={{

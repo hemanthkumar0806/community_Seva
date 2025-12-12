@@ -22,21 +22,7 @@ export default function TabLayout() {
         },
       }}
     >
-      {/* DONATE TAB */}
-      <Tabs.Screen
-        name="donate"
-        options={{
-          tabBarLabel: "Donate",
-          tabBarIcon: ({ focused, color }) => (
-            <Ionicons
-              name={focused ? "water" : "water-outline"}
-              size={26}
-              color={color}
-              style={{ opacity: focused ? 1 : 0.5 }} // subtle fade for inactive
-            />
-          ),
-        }}
-      />
+     
 
       {/* ACCEPT TAB */}
       <Tabs.Screen
@@ -49,6 +35,21 @@ export default function TabLayout() {
               size={26}
               color={color}
               style={{ opacity: focused ? 1 : 0.5 }}
+            />
+          ),
+        }}
+      />
+       {/* DONATE TAB */}
+      <Tabs.Screen
+        name="donate"
+        options={{
+          tabBarLabel: "Donate",
+          tabBarIcon: ({ focused, color }) => (
+            <Ionicons
+              name={focused ? "water" : "water-outline"}
+              size={26}
+              color={color}
+              style={{ opacity: focused ? 1 : 0.5 }} // subtle fade for inactive
             />
           ),
         }}
